@@ -2,11 +2,10 @@
 trigger:
 - master
 
-# 不要使用 pool: Default
-# 改为使用 environment
+# 使用你已配置的自托管环境（不是微软托管代理）
 jobs:
-- deployment: 'BuildAndDeploy'
-  environment: 'myLinuxVMs'  # 你的环境名称
+- deployment: 'BuildAndTriggerJenkins'
+  environment: 'myLinuxVMs'        # 你的环境名称
   strategy:
     runOnce:
       deploy:
@@ -15,7 +14,7 @@ jobs:
         - checkout: self
           fetchDepth: 1
 
-        # 2. 安装 Node.js
+        # 2. 安装 Node.js 18.x
 #        - task: NodeTool@0
 #          inputs:
 #            versionSpec: '18.x'
@@ -29,7 +28,7 @@ jobs:
         # 4. 触发 Jenkins 任务
         - task: JenkinsQueueJob@1
           inputs:
-            serverEndpoint: 'MyJenkins'
-            jobName: 'fabrikam-node-build'
-            captureConsole: true
+            serverEndpoint: 'MyJenkins'        # 你创建的服务连接名称
+            jobName: 'fabrikam-node-build'     # Jenkins 上的任务名称
+            captureConsole: true               # 捕获 Jenkins 控制台输出
           displayName: 'Trigger Jenkins Build'
