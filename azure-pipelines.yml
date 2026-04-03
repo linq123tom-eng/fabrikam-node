@@ -1,8 +1,37 @@
+# azure-pipelines.yml
 trigger:
 - master
 
-pool: 'Default'
+# 使用 Environments 方式
+jobs:
+- deployment: 'BuildAndTriggerJenkins'
+  environment: 'myLinuxVMs'           # 你的环境名称
+  strategy:
+    runOnce:
+      deploy:
+        steps:
+        # 1. 测试代理连通性
+        - script: |
+            echo "Hello from environment myLinuxVMs"
+            whoami
+            pwd
+          displayName: 'Test environment agent'
 
-steps:
-- script: echo "Hello from self-hosted agent"
-  displayName: 'Test agent'
+        # 2. 安装 Node.js
+        - task: NodeTool@0
+          inputs:
+            versionSpec: '18.x'
+          displayName: 'Install Node.js'
+
+        # 3. 运行 npm install
+        - script: |
+            npm install
+          displayName: 'npm install'
+
+        # 4. 触发 Jenkins 任务
+        - task: JenkinsQueueJob@1
+          inputs:
+            serverEndpoint: 'MyJenkins'
+            jobName: 'fabrikam-node-build'
+            captureConsole: true
+          displayName: 'Trigger Jenkins Build'
