@@ -45,6 +45,6 @@ jobs:
         - task: JenkinsQueueJob@2
           inputs:
             serverEndpoint: 'MyJenkins'
-            jobName: 'fabrikam-node-build'
+            jobName: 'fabrikam-node-build1'
             captureConsole: true
           displayName: '触发 Jenkins 任务'
