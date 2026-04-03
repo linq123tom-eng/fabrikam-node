@@ -1,30 +1,20 @@
 # azure-pipelines.yml
 trigger:
-- master  # 或者你的默认分支名
+- master
 
 pool:
-  vmImage: 'ubuntu-latest'
+  name: 'Default'
 
 steps:
-# 1. 拉取代码（Azure DevOps 会自动完成，但明确写出也可以）
-- checkout: self
-  fetchDepth: 1
+# 第一步：安装 Node.js 依赖
+#- script: |
+#    npm install
+#  displayName: 'npm install'
 
-# 2. 安装 Node.js（如果需要特定版本）
-#- task: NodeTool@0
-#  inputs:
-#    versionSpec: '18.x'
-#  displayName: 'Install Node.js'
-
-# 3. 运行 npm install
-- script: |
-    npm install
-  displayName: 'npm install'
-
-# 4. 触发 Jenkins 任务
+# 第二步：触发 Jenkins 构建任务
 - task: JenkinsQueueJob@1
   inputs:
-    serverEndpoint: 'MyJenkins'
-    jobName: 'fabrikam-node-build'  # 确认这是 Jenkins 上的准确任务名
-    captureConsole: true
-  displayName: 'Trigger Jenkins Build'
+    serverEndpoint: 'MyJenkins'           # 你创建的服务连接名称
+    jobName: 'fabrikam-node-build'        # 你的 Jenkins 任务名称
+    captureConsole: true                   # 捕获 Jenkins 控制台输出
+    parameterizedJob: false                # 如果你的 Jenkins 任务不需要参数
