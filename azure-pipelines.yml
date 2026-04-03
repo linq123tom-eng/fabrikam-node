@@ -2,40 +2,49 @@
 trigger:
 - master
 
-# 使用环境方式（deployment job）
 jobs:
 - deployment: 'DeployToMyVM'
   environment:
-    name: 'myLinuxVMs'           # 你的环境名称
-    resourceName: 'myVM'         # 你的代理名称
+    name: 'myLinuxVMs'
+    resourceName: 'myVM'
     resourceType: 'VirtualMachine'
   strategy:
     runOnce:
       deploy:
         steps:
-        # 验证代理环境
-        - script: |
-            echo "--- 代理信息验证 ---"
-            echo "环境名称: $(environment.name)"
-            echo "代理名称: $(Agent.Name)"
-            echo "代理所在目录: $(Agent.WorkFolder)"
-            echo "任务正在自托管代理上运行！"
-          displayName: '验证自托管代理环境'
+        # 1. 拉取代码
+        - checkout: self
+          clean: true
+          fetchDepth: 1
+          displayName: '拉取代码'
 
-        # 安装 Node.js
+        # 2. 验证代码已拉取
+        - script: |
+            echo "当前目录: $(pwd)"
+            echo "文件列表:"
+            ls -la
+          displayName: '验证代码文件'
+
+        # 3. 安装 Node.js
         - task: NodeTool@0
           inputs:
             versionSpec: '25.x'
           displayName: '安装 Node.js'
 
-        # 安装 npm 依赖
+        # 4. 验证 Node.js 版本
+        - script: |
+            node --version
+            npm --version
+          displayName: '验证 Node.js 版本'
+
+        # 5. 安装 npm 依赖
         - script: npm install
           displayName: '安装 npm 依赖'
 
-        # 触发 Jenkins 构建
+        # 6. 触发 Jenkins 任务
         - task: JenkinsQueueJob@2
           inputs:
-            serverEndpoint: 'MyJenkins'        # 你的 Jenkins 服务连接名称
-            jobName: 'fabrikam-node-build'     # Jenkins 上的任务名称
-            captureConsole: true               # 等待 Jenkins 任务完成并捕获日志
+            serverEndpoint: 'MyJenkins'
+            jobName: 'fabrikam-node-build'
+            captureConsole: true
           displayName: '触发 Jenkins 任务'
