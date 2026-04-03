@@ -1,10 +1,8 @@
-# azure-pipelines.yml
 trigger:
 - master
 
-# 明确指定使用你的自托管代理池 'Default'
 pool: 'Default'
 
 steps:
-- script: echo "Hello from my self-hosted agent!"
-  displayName: 'Test self-hosted agent'
+- script: echo "Hello from self-hosted agent"
+  displayName: 'Test agent'
