@@ -2,17 +2,40 @@
 trigger:
 - master
 
+# 使用环境方式（deployment job）
 jobs:
-- deployment: DeployToMyVM
+- deployment: 'DeployToMyVM'
   environment:
-    name: myLinuxVMs
-    resourceName: myVM   # 👈 关键！
-    resourceType: VirtualMachine
+    name: 'myLinuxVMs'           # 你的环境名称
+    resourceName: 'myVM'         # 你的代理名称
+    resourceType: 'VirtualMachine'
   strategy:
     runOnce:
       deploy:
         steps:
+        # 验证代理环境
         - script: |
-            echo "Deployment job is running on environment: $(environment.name)"
-            hostname
-          displayName: 'Verify Environment'
+            echo "--- 代理信息验证 ---"
+            echo "环境名称: $(environment.name)"
+            echo "代理名称: $(Agent.Name)"
+            echo "代理所在目录: $(Agent.WorkFolder)"
+            echo "任务正在自托管代理上运行！"
+          displayName: '验证自托管代理环境'
+
+        # 安装 Node.js
+#        - task: NodeTool@0
+#          inputs:
+#            versionSpec: '18.x'
+#          displayName: '安装 Node.js'
+
+        # 安装 npm 依赖
+        - script: npm install
+          displayName: '安装 npm 依赖'
+
+        # 触发 Jenkins 构建
+        - task: JenkinsQueueJob@2
+          inputs:
+            serverEndpoint: 'MyJenkins'        # 你的 Jenkins 服务连接名称
+            jobName: 'fabrikam-node-build'     # Jenkins 上的任务名称
+            captureConsole: true               # 等待 Jenkins 任务完成并捕获日志
+          displayName: '触发 Jenkins 任务'
