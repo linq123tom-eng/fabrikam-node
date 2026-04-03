@@ -1,26 +1,35 @@
-# 手动触发
-trigger: none
+# azure-pipelines.yml
+trigger:
+- master
 
-# 定义部署阶段
-stages:
-- stage: Deploy
-  displayName: '部署到 Linux VM'
-  jobs:
-  - deployment: DeployToVM
-    displayName: '部署 Node.js 应用'
-    environment: 'myLinuxVMs'
-    strategy:
-      runOnce:
-        deploy:
-          steps:
-          - script: |
-              echo "=== 部署开始 ==="
-              echo "当前代理: $(AGENT_NAME)"
-              echo "工作目录: $(System.DefaultWorkingDirectory)"
-              
-              # 检查系统信息
-              uname -a
-              free -h
-              
-              echo "=== 部署完成 ==="
-            displayName: '检查部署环境'
+# 不要使用 pool: Default
+# 改为使用 environment
+jobs:
+- deployment: 'BuildAndDeploy'
+  environment: 'myLinuxVMs'  # 你的环境名称
+  strategy:
+    runOnce:
+      deploy:
+        steps:
+        # 1. 拉取代码
+        - checkout: self
+          fetchDepth: 1
+
+        # 2. 安装 Node.js
+#        - task: NodeTool@0
+#          inputs:
+#            versionSpec: '18.x'
+#          displayName: 'Install Node.js'
+
+        # 3. 运行 npm install
+        - script: |
+            npm install
+          displayName: 'npm install'
+
+        # 4. 触发 Jenkins 任务
+        - task: JenkinsQueueJob@1
+          inputs:
+            serverEndpoint: 'MyJenkins'
+            jobName: 'fabrikam-node-build'
+            captureConsole: true
+          displayName: 'Trigger Jenkins Build'
