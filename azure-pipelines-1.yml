@@ -1,0 +1,25 @@
+trigger: none
+
+# 定义部署阶段
+stages:
+- stage: Deploy
+  displayName: '部署到 Linux VM'
+  jobs:
+  - deployment: DeployToVM
+    displayName: '部署 Node.js 应用'
+    environment: 'myLinuxVMs'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - script: |
+              echo "=== 部署开始 ==="
+              echo "当前代理: $(AGENT_NAME)"
+              echo "工作目录: $(System.DefaultWorkingDirectory)"
+              
+              # 检查系统信息
+              uname -a
+              free -h
+              
+              echo "=== 部署完成 ==="
+            displayName: '检查部署环境'
