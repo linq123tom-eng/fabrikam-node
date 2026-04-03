@@ -21,7 +21,6 @@ jobs:
         # 2. 验证代码已拉取
         - script: |
             echo "当前目录: $(pwd)"
-            echo "文件列表:"
             ls -la
           displayName: '验证代码文件'
 
@@ -48,3 +47,59 @@ jobs:
             jobName: 'fabrikam-node-build1'
             captureConsole: true
           displayName: '触发 Jenkins 任务'
+
+        # 7. 部署到 Nginx
+        - script: |
+            echo "--- 开始部署 ---"
+            
+            # 创建部署目录
+            sudo mkdir -p /var/www/html/fabrikam-node
+            
+            # 复制应用文件
+            sudo cp -r $(pwd)/* /var/www/html/fabrikam-node/
+            
+            # 进入目录安装依赖
+            cd /var/www/html/fabrikam-node
+            sudo npm install --production || echo "npm install 跳过"
+            
+            # 查找并启动应用
+            if [ -f "app.js" ]; then
+              pm2 stop fabrikam-node 2>/dev/null || true
+              pm2 start app.js --name fabrikam-node
+              pm2 save
+              echo "应用已启动 (app.js)"
+            elif [ -f "index.js" ]; then
+              pm2 stop fabrikam-node 2>/dev/null || true
+              pm2 start index.js --name fabrikam-node
+              pm2 save
+              echo "应用已启动 (index.js)"
+            else
+              echo "未找到启动文件"
+            fi
+            
+            echo "--- 部署完成 ---"
+          displayName: '部署应用'
+
+        # 8. 配置 Nginx 反向代理
+        - script: |
+            sudo tee /etc/nginx/sites-available/fabrikam-node > /dev/null << 'EOF'
+            server {
+                listen 80;
+                server_name _;
+                
+                location / {
+                    proxy_pass http://localhost:3000;
+                    proxy_http_version 1.1;
+                    proxy_set_header Upgrade $http_upgrade;
+                    proxy_set_header Connection 'upgrade';
+                    proxy_set_header Host $host;
+                    proxy_cache_bypass $http_upgrade;
+                }
+            }
+            EOF
+            
+            sudo ln -sf /etc/nginx/sites-available/fabrikam-node /etc/nginx/sites-enabled/
+            sudo rm -f /etc/nginx/sites-enabled/default
+            sudo nginx -t && sudo systemctl reload nginx
+            echo "Nginx 反向代理已配置"
+          displayName: '配置 Nginx 反向代理'
