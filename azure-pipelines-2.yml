@@ -1,0 +1,20 @@
+# azure-pipelines.yml
+trigger:
+- master
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+steps:
+# 第一步：安装 Node.js 依赖
+- script: |
+    npm install
+  displayName: 'npm install'
+
+# 第二步：触发 Jenkins 构建任务
+- task: JenkinsQueueJob@1
+  inputs:
+    serverEndpoint: 'MyJenkins'           # 你创建的服务连接名称
+    jobName: 'fabrikam-node-build'        # 你的 Jenkins 任务名称
+    captureConsole: true                   # 捕获 Jenkins 控制台输出
+    parameterizedJob: false                # 如果你的 Jenkins 任务不需要参数
