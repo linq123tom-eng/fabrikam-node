@@ -2,36 +2,16 @@
 trigger:
 - master
 
-# 使用 Environments 方式
+# 关键：使用 deployment job 并指向你的环境
 jobs:
-- deployment: 'BuildAndTriggerJenkins'
-  environment: 'myLinuxVMs'           # 你的环境名称
+- deployment: 'DeployToMyVM'
+  environment: 'myLinuxVMs'  # 确认这里的名称与你的环境完全一致
   strategy:
     runOnce:
       deploy:
         steps:
-        # 1. 测试代理连通性
+        # 关键：先运行一个测试任务，确认环境正确
         - script: |
-            echo "Hello from environment myLinuxVMs"
-            whoami
-            pwd
-          displayName: 'Test environment agent'
-
-        # 2. 安装 Node.js
-        - task: NodeTool@0
-          inputs:
-            versionSpec: '18.x'
-          displayName: 'Install Node.js'
-
-        # 3. 运行 npm install
-        - script: |
-            npm install
-          displayName: 'npm install'
-
-        # 4. 触发 Jenkins 任务
-        - task: JenkinsQueueJob@1
-          inputs:
-            serverEndpoint: 'MyJenkins'
-            jobName: 'fabrikam-node-build'
-            captureConsole: true
-          displayName: 'Trigger Jenkins Build'
+            echo "Deployment job is running on environment: $(environment.name)"
+            hostname
+          displayName: 'Verify Environment'
