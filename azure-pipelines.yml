@@ -2,33 +2,9 @@
 trigger:
 - master
 
-# 使用你已配置的自托管环境（不是微软托管代理）
-jobs:
-- deployment: 'BuildAndTriggerJenkins'
-  environment: 'myLinuxVMs'        # 你的环境名称
-  strategy:
-    runOnce:
-      deploy:
-        steps:
-        # 1. 拉取代码
-        - checkout: self
-          fetchDepth: 1
+# 明确指定使用你的自托管代理池 'Default'
+pool: 'Default'
 
-        # 2. 安装 Node.js 18.x
-#        - task: NodeTool@0
-#          inputs:
-#            versionSpec: '18.x'
-#          displayName: 'Install Node.js'
-
-        # 3. 运行 npm install
-        - script: |
-            npm install
-          displayName: 'npm install'
-
-        # 4. 触发 Jenkins 任务
-        - task: JenkinsQueueJob@1
-          inputs:
-            serverEndpoint: 'MyJenkins'        # 你创建的服务连接名称
-            jobName: 'fabrikam-node-build'     # Jenkins 上的任务名称
-            captureConsole: true               # 捕获 Jenkins 控制台输出
-          displayName: 'Trigger Jenkins Build'
+steps:
+- script: echo "Hello from my self-hosted agent!"
+  displayName: 'Test self-hosted agent'
