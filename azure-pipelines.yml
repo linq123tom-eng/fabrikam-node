@@ -2,15 +2,16 @@
 trigger:
 - master
 
-# 关键：使用 deployment job 并指向你的环境
 jobs:
-- deployment: 'DeployToMyVM'
-  environment: 'myLinuxVMs'  # 确认这里的名称与你的环境完全一致
+- deployment: DeployToMyVM
+  environment:
+    name: myLinuxVMs
+    resourceName: myVM   # 👈 关键！
+    resourceType: VirtualMachine
   strategy:
     runOnce:
       deploy:
         steps:
-        # 关键：先运行一个测试任务，确认环境正确
         - script: |
             echo "Deployment job is running on environment: $(environment.name)"
             hostname
