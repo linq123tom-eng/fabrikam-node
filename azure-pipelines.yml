@@ -18,7 +18,7 @@ jobs:
           fetchDepth: 1
           displayName: '拉取代码'
 
-        # 2. 验证代码已拉取
+        # 2. 验证代码
         - script: |
             echo "当前目录: $(pwd)"
             ls -la
@@ -30,17 +30,17 @@ jobs:
             versionSpec: '25.x'
           displayName: '安装 Node.js'
 
-        # 4. 验证 Node.js 版本
+        # 4. 验证 Node.js
         - script: |
             node --version
             npm --version
           displayName: '验证 Node.js 版本'
 
-        # 5. 安装 npm 依赖
+        # 5. 安装依赖
         - script: npm install
           displayName: '安装 npm 依赖'
 
-        # 6. 触发 Jenkins 任务
+        # 6. 触发 Jenkins
         - task: JenkinsQueueJob@2
           inputs:
             serverEndpoint: 'MyJenkins'
@@ -48,45 +48,62 @@ jobs:
             captureConsole: true
           displayName: '触发 Jenkins 任务'
 
-        # 7. 部署到 Nginx
+        # 7. 部署并修复应用
         - script: |
-            echo "--- 开始部署 ---"
+            echo "=== 检查并修复 app.js ==="
             
             # 创建部署目录
             sudo mkdir -p /var/www/html/fabrikam-node
             
-            # 复制应用文件
+            # 复制代码到部署目录
             sudo cp -r $(pwd)/* /var/www/html/fabrikam-node/
             
-            # 进入目录安装依赖
             cd /var/www/html/fabrikam-node
-            sudo npm install --production || echo "npm install 跳过"
             
-            # 查找并启动应用
-            if [ -f "app.js" ]; then
-              pm2 stop fabrikam-node 2>/dev/null || true
-              pm2 start app.js --name fabrikam-node
-              pm2 save
-              echo "应用已启动 (app.js)"
-            elif [ -f "index.js" ]; then
-              pm2 stop fabrikam-node 2>/dev/null || true
-              pm2 start index.js --name fabrikam-node
-              pm2 save
-              echo "应用已启动 (index.js)"
+            # 检查是否有 app.listen，如果没有则添加
+            if ! grep -q "app.listen" app.js; then
+              echo "app.js 缺少启动代码，正在添加..."
+              sudo tee -a app.js << 'APPEND'
+            
+            // Auto-added by Azure Pipeline
+            const port = process.env.PORT || 3000;
+            app.listen(port, () => {
+              console.log(`Server running on port ${port}`);
+            });
+            APPEND
+              echo "启动代码已添加"
             else
-              echo "未找到启动文件"
+              echo "启动代码已存在"
             fi
             
-            echo "--- 部署完成 ---"
-          displayName: '部署应用'
+            # 重新安装依赖
+            sudo npm install --production || sudo npm install
+            
+            echo "=== 用 PM2 重启应用 ==="
+            pm2 stop fabrikam-node 2>/dev/null || true
+            pm2 delete fabrikam-node 2>/dev/null || true
+            pm2 start app.js --name fabrikam-node
+            pm2 save
+            
+            echo "=== 验证应用 ==="
+            sleep 3
+            if curl -s http://localhost:3000 > /dev/null; then
+              echo "✅ 应用运行正常"
+            else
+              echo "❌ 应用启动失败"
+              pm2 logs fabrikam-node --lines 10
+              exit 1
+            fi
+          displayName: '部署并修复应用'
 
-        # 8. 配置 Nginx 反向代理
+        # 8. 配置 Nginx
         - script: |
-            sudo tee /etc/nginx/sites-available/fabrikam-node > /dev/null << 'EOF'
+            echo "=== 配置 Nginx ==="
+            
+            sudo tee /etc/nginx/sites-available/fabrikam-node > /dev/null << 'NGINX'
             server {
                 listen 80;
                 server_name _;
-                
                 location / {
                     proxy_pass http://localhost:3000;
                     proxy_http_version 1.1;
@@ -96,10 +113,12 @@ jobs:
                     proxy_cache_bypass $http_upgrade;
                 }
             }
-            EOF
+            NGINX
             
             sudo ln -sf /etc/nginx/sites-available/fabrikam-node /etc/nginx/sites-enabled/
             sudo rm -f /etc/nginx/sites-enabled/default
             sudo nginx -t && sudo systemctl reload nginx
-            echo "Nginx 反向代理已配置"
-          displayName: '配置 Nginx 反向代理'
+            
+            echo "Nginx 配置完成"
+            echo "访问地址: http://$(curl -s ifconfig.me)"
+          displayName: '配置 Nginx'
